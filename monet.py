@@ -26,7 +26,7 @@ import cluttergtk
 
 import cream
 
-PATH = '/home/stein/Bilder/'
+PATH = '/home/stein/Bilder/Bildschirmfotos/'
 
 def rounded_rectangle(cr, x, y, w, h, r=20):
 
@@ -80,14 +80,18 @@ class Image(clutter.Texture):
 
     def fade_in(self):
 
-        self.animate(clutter.AnimationMode(clutter.LINEAR), 400, 'opacity', 255)
+        self.fade(255)
         return False
 
 
     def fade_out(self):
 
-        self.animate(clutter.AnimationMode(clutter.LINEAR), 400, 'opacity', 0)
+        self.fade(0)
         return False
+
+
+    def fade(self, opacity, duration=400):
+        self.animate(clutter.AnimationMode(clutter.LINEAR), duration, 'opacity', opacity)
 
 
 class ControlAreaBackground(clutter.CairoTexture):
@@ -109,6 +113,7 @@ class ControlAreaBackground(clutter.CairoTexture):
 
 
 class ControlArea(clutter.Group):
+    """ A class representing the small box containing the control buttons. """
 
     __gsignals__ = {
         'previous-image': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
@@ -119,46 +124,63 @@ class ControlArea(clutter.Group):
 
         clutter.Group.__init__(self)
 
+        # Enable UI events...
         self.set_reactive(True)
 
+        # Add the background:
         self.background = ControlAreaBackground()
         self.add(self.background)
 
+        # Add the icons...
         self.icon_previous = Image('previous.svg', load=True)
         self.icon_previous.set_size(48, 48)
         self.icon_previous.set_position(11, 11)
+        self.icon_previous.set_opacity(200)
         self.add(self.icon_previous)
 
         self.icon_slideshow = Image('slideshow.svg', load=True)
         self.icon_slideshow.set_size(48, 48)
         self.icon_slideshow.set_position(69, 11)
+        self.icon_slideshow.set_opacity(200)
         self.add(self.icon_slideshow)
 
         self.icon_next = Image('next.svg', load=True)
         self.icon_next.set_size(48, 48)
         self.icon_next.set_position(127, 11)
+        self.icon_next.set_opacity(200)
         self.add(self.icon_next)
 
         self.icon_previous.set_reactive(True)
         self.icon_previous.connect('button-press-event', lambda *args: self.emit('previous-image'))
+        self.icon_previous.connect('enter-event', lambda *args: self.icon_previous.fade(255, duration=200))
+        self.icon_previous.connect('leave-event', lambda *args: self.icon_previous.fade(200, duration=200))
 
         self.icon_next.set_reactive(True)
         self.icon_next.connect('button-press-event', lambda *args: self.emit('next-image'))
+        self.icon_next.connect('enter-event', lambda *args: self.icon_next.fade(255, duration=200))
+        self.icon_next.connect('leave-event', lambda *args: self.icon_next.fade(200, duration=200))
 
 
     def fade_in(self):
+        """ Fade in the control area... """
 
         self.animate(clutter.AnimationMode(clutter.LINEAR), 400, 'opacity', 255)
         return False
 
 
     def fade_out(self):
+        """ Fade out the control area... """
 
         self.animate(clutter.AnimationMode(clutter.LINEAR), 400, 'opacity', 0)
         return False
 
 
 class ImageView(cluttergtk.Embed):
+    """
+    A subclass of cluttergtk.Embed managing the displayed images
+    including animations, etc. and the basic interaction through
+    the control area.
+    """
 
     def __init__(self):
 
@@ -168,41 +190,65 @@ class ImageView(cluttergtk.Embed):
             'control-area-fade-out': None
             }
 
+        # Control the size of the surface and the images...
         self.connect('size-allocate', self.size_allocate_cb)
 
+        # Initialize...
         self.realize()
         self.stage = self.get_stage()
         self.stage.set_color(clutter.color_from_string('black'))
 
+        # Add some images...
+        # TODO: Implement file dialog!
         self.images = []
         for i in os.listdir(PATH):
             if i.endswith('.png') or i.endswith('.jpg'):
                 self.images.append(Image(PATH + i))
 
+        # Show the first image...
         self.current_image = None
-
         self.show_image(0, animate=False)
 
+        # Initialize the control area...
         self.control_area = ControlArea()
+
+        # Keep it above the images:
         self.control_area.set_depth(1)
+
+        # Connect to the events from the control area...
         self.control_area.connect('previous-image', lambda *args: self.show_image(max(self.current_image - 1, 0)))
         self.control_area.connect('next-image', lambda *args: self.show_image(min(self.current_image + 1, len(self.images) - 1)))
         self.control_area.connect('enter-event', self.control_area_enter_event_cb)
         self.control_area.connect('leave-event', self.control_area_enter_leave_cb)
-        self.stage.add(self.control_area)
 
+        # Add the control area to the UI...
+        self.stage.add(self.control_area)
         self.control_area.set_opacity(0)
 
+        # Fade in the control area on mouse movements...
         self.stage.connect('motion-event', self.motion_event_cb)
 
 
     def load_image(self, img, async=False):
+        """ Load the image with the given ID... """
+
         self.images[img].load(async)
 
 
     def show_image(self, img, animate=True):
+        """
+        Show the given image.
 
+        :param img: The ID of the image.
+        :type img: `int`
+        :param animate: Animate the transition?
+        :type animate: `bool`
+        """
+
+        # Load the image...
         self.load_image(img)
+
+        # Preload the next image...
         self.load_image(img + 1, async=True)
 
         if img == self.current_image:
@@ -273,14 +319,17 @@ class ImageView(cluttergtk.Embed):
 
 
 class Monet(cream.Module):
+    """ Main class of Monet. """
 
     def __init__(self):
 
         cream.Module.__init__(self)
 
+        # Initialize the GUI...
         self.window = gtk.Window()
 
         self.view = ImageView()
+
         self.window.add(self.view)
         self.window.set_size_request(800, 480)
         self.window.show_all()

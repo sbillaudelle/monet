@@ -26,7 +26,7 @@ import cluttergtk
 
 import cream
 
-PATH = '/home/stein/Bilder/Pr0n/'
+PATH = '/home/stein/Bilder/'
 
 def rounded_rectangle(cr, x, y, w, h, r=20):
 
@@ -132,19 +132,19 @@ class ControlArea(clutter.Group):
         self.add(self.background)
 
         # Add the icons...
-        self.icon_previous = Image('previous.svg', load=True)
+        self.icon_previous = Image('data/images/previous.svg', load=True)
         self.icon_previous.set_size(48, 48)
         self.icon_previous.set_position(11, 11)
         self.icon_previous.set_opacity(200)
         self.add(self.icon_previous)
 
-        self.icon_slideshow = Image('slideshow.svg', load=True)
+        self.icon_slideshow = Image('data/images/slideshow.svg', load=True)
         self.icon_slideshow.set_size(48, 48)
         self.icon_slideshow.set_position(69, 11)
         self.icon_slideshow.set_opacity(200)
         self.add(self.icon_slideshow)
 
-        self.icon_next = Image('next.svg', load=True)
+        self.icon_next = Image('data/images/next.svg', load=True)
         self.icon_next.set_size(48, 48)
         self.icon_next.set_position(127, 11)
         self.icon_next.set_opacity(200)

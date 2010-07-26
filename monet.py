@@ -26,7 +26,11 @@ import cluttergtk
 
 import cream
 
-PATH = '/home/stein/Bilder/'
+#PATH = '/home/stein/Bilder/'
+PATH = '/'
+ICON_SIZE = 32
+ICON_SPACING = 5
+CONTROL_BOX_MARGIN = 8
 
 def rounded_rectangle(cr, x, y, w, h, r=20):
 
@@ -94,22 +98,70 @@ class Image(clutter.Texture):
         self.animate(clutter.AnimationMode(clutter.LINEAR), duration, 'opacity', opacity)
 
 
+class StartScreen(clutter.Group):
+
+    __gsignals__ = {
+        'show-open-dialog': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
+        }
+
+    def __init__(self):
+
+        clutter.Group.__init__(self)
+
+        self.set_reactive(True)
+        self.connect('button-release-event', lambda *args: self.emit('show-open-dialog'))
+
+        self.icon = Image('data/images/monet.svg')
+        self.icon.load()
+
+        self.label = clutter.Label()
+        self.label.set_color(clutter.Color(255, 255, 255, 200))
+        self.label.set_font_name('Sans 12')
+        self.label.set_text("Click to open files...")
+
+        self.add(self.icon)
+        self.add(self.label)
+
+
+    def set_size(self, width, height):
+
+        clutter.Group.set_size(self, width, height)
+        self.icon.set_position((width - self.icon.get_width()) / 2, (height - self.icon.get_height() - self.label.get_height() - 10) / 2)
+        self.label.set_position((width - self.label.get_width()) / 2, (height - self.icon.get_height() - self.label.get_height() - 10) / 2 + self.icon.get_height() + 10)
+
+
+    def fade_in(self):
+
+        self.fade(255)
+        return False
+
+
+    def fade_out(self):
+
+        self.fade(0)
+        return False
+
+
+    def fade(self, opacity, duration=400):
+        self.animate(clutter.AnimationMode(clutter.LINEAR), duration, 'opacity', opacity)
+
+
 class ControlAreaBackground(clutter.CairoTexture):
 
     def __init__(self):
 
-        clutter.CairoTexture.__init__(self, 184, 68)
+        clutter.CairoTexture.__init__(self, 3*ICON_SIZE + 2*ICON_SPACING + 2*CONTROL_BOX_MARGIN, ICON_SIZE + 2*CONTROL_BOX_MARGIN)
 
         ctx = self.cairo_create()
-        rounded_rectangle(ctx, 0, 0, 184, 68, 15)
+        rounded_rectangle(ctx, 0, 0, 3*ICON_SIZE + 2*ICON_SPACING + 2*CONTROL_BOX_MARGIN, ICON_SIZE + 2*CONTROL_BOX_MARGIN, 10)
 
-        ctx.set_source_rgba(0, 0, 0, .8)
+        ctx.set_source_rgba(0, 0, 0, .6)
         ctx.fill()
 
-        #ctx.set_line_width(1)
-        #rounded_rectangle(ctx, .5, .5, 183, 67, 15)
-        #ctx.set_source_rgba(1, 1, 1, .4)
-        #ctx.stroke()
+        ctx.set_line_width(1)
+        rounded_rectangle(ctx, .5, .5, 3*ICON_SIZE + 2*ICON_SPACING + 2*CONTROL_BOX_MARGIN - 1, ICON_SIZE + 2*CONTROL_BOX_MARGIN - 1, 10)
+        ctx.set_source_rgba(1, 1, 1, .2)
+        ctx.stroke()
 
 
 class ControlArea(clutter.Group):
@@ -133,32 +185,32 @@ class ControlArea(clutter.Group):
 
         # Add the icons...
         self.icon_previous = Image('data/images/previous.svg', load=True)
-        self.icon_previous.set_size(48, 48)
-        self.icon_previous.set_position(11, 11)
-        self.icon_previous.set_opacity(200)
+        self.icon_previous.set_size(ICON_SIZE, ICON_SIZE)
+        self.icon_previous.set_position(CONTROL_BOX_MARGIN, CONTROL_BOX_MARGIN)
+        self.icon_previous.set_opacity(150)
         self.add(self.icon_previous)
 
         self.icon_slideshow = Image('data/images/slideshow.svg', load=True)
-        self.icon_slideshow.set_size(48, 48)
-        self.icon_slideshow.set_position(69, 11)
-        self.icon_slideshow.set_opacity(200)
+        self.icon_slideshow.set_size(ICON_SIZE, ICON_SIZE)
+        self.icon_slideshow.set_position(CONTROL_BOX_MARGIN + ICON_SIZE + ICON_SPACING, CONTROL_BOX_MARGIN)
+        self.icon_slideshow.set_opacity(150)
         self.add(self.icon_slideshow)
 
         self.icon_next = Image('data/images/next.svg', load=True)
-        self.icon_next.set_size(48, 48)
-        self.icon_next.set_position(127, 11)
-        self.icon_next.set_opacity(200)
+        self.icon_next.set_size(ICON_SIZE, ICON_SIZE)
+        self.icon_next.set_position(CONTROL_BOX_MARGIN + 2*ICON_SIZE + 2*ICON_SPACING, CONTROL_BOX_MARGIN)
+        self.icon_next.set_opacity(150)
         self.add(self.icon_next)
 
         self.icon_previous.set_reactive(True)
         self.icon_previous.connect('button-press-event', lambda *args: self.emit('previous-image'))
         self.icon_previous.connect('enter-event', lambda *args: self.icon_previous.fade(255, duration=200))
-        self.icon_previous.connect('leave-event', lambda *args: self.icon_previous.fade(200, duration=200))
+        self.icon_previous.connect('leave-event', lambda *args: self.icon_previous.fade(150, duration=200))
 
         self.icon_next.set_reactive(True)
         self.icon_next.connect('button-press-event', lambda *args: self.emit('next-image'))
         self.icon_next.connect('enter-event', lambda *args: self.icon_next.fade(255, duration=200))
-        self.icon_next.connect('leave-event', lambda *args: self.icon_next.fade(200, duration=200))
+        self.icon_next.connect('leave-event', lambda *args: self.icon_next.fade(150, duration=200))
 
 
     def fade_in(self):
@@ -181,6 +233,10 @@ class ImageView(cluttergtk.Embed):
     including animations, etc. and the basic interaction through
     the control area.
     """
+
+    __gsignals__ = {
+        'show-open-dialog': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+        }
 
     def __init__(self):
 
@@ -222,8 +278,13 @@ class ImageView(cluttergtk.Embed):
         self.stage.add(self.control_area)
         self.control_area.set_opacity(0)
 
+        # Add the start screen:
+        self.start_screen = StartScreen()
+        self.stage.add(self.start_screen)
+
         # Fade in the control area on mouse movements...
         self.stage.connect('motion-event', self.motion_event_cb)
+        self.start_screen.connect('show-open-dialog', lambda *args: self.emit('show-open-dialog'))
 
 
     def set_animate_transition(self, value):
@@ -252,6 +313,9 @@ class ImageView(cluttergtk.Embed):
         :param animate: Animate the transition?
         :type animate: `bool`
         """
+
+        if self.current_image == None:
+            self.start_screen.fade_out()
 
         # Load the image...
         self.load_image(img)
@@ -290,6 +354,9 @@ class ImageView(cluttergtk.Embed):
 
     def motion_event_cb(self, stage, event):
 
+        if self.current_image == None:
+            return
+
         self.control_area.fade_in()
         if self.timeouts['control-area-fade-out']:
             gobject.source_remove(self.timeouts['control-area-fade-out'])
@@ -327,7 +394,10 @@ class ImageView(cluttergtk.Embed):
     def size_allocate_cb(self, source, allocation):
 
         self.stage.set_size(allocation.width, allocation.height)
-        self.calculate_image_position(self.images[self.current_image])
+        self.start_screen.set_size(allocation.width, allocation.height)
+
+        if self.current_image != None:
+            self.calculate_image_position(self.images[self.current_image])
 
         self.control_area.set_position((allocation.width - self.control_area.get_size()[0]) / 2, allocation.height - self.control_area.get_size()[1] - 30)
 
@@ -346,6 +416,8 @@ class Monet(cream.Module):
         self.view = ImageView()
         self.view.set_animate_transition(self.config.animate_transition)
 
+        self.view.connect('show-open-dialog', self.show_open_dialog_cb)
+
         for i in os.listdir(PATH):
             if i.endswith('.png') or i.endswith('.jpg'):
                 self.view.add_image(os.path.join(PATH, i))
@@ -355,6 +427,24 @@ class Monet(cream.Module):
         self.window.show_all()
 
         self.window.connect('destroy', lambda *args: self.quit())
+
+
+    def show_open_dialog_cb(self, view):
+
+        dialog = gtk.FileChooserDialog(title="Select a folder...",
+                    parent=None,
+                    action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT))
+        res = dialog.run()
+
+        if res == gtk.RESPONSE_ACCEPT:
+            path = dialog.get_filename()
+
+            for i in os.listdir(path):
+                if i.endswith('.png') or i.endswith('.jpg'):
+                    self.view.add_image(os.path.join(path, i))
+
+        dialog.hide()
 
 
 if __name__ == '__main__':

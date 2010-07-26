@@ -26,7 +26,7 @@ import cluttergtk
 
 import cream
 
-PATH = '/home/stein/Bilder/Bildschirmfotos/'
+PATH = '/home/stein/Bilder/Pr0n/'
 
 def rounded_rectangle(cr, x, y, w, h, r=20):
 
@@ -201,13 +201,10 @@ class ImageView(cluttergtk.Embed):
         # Add some images...
         # TODO: Implement file dialog!
         self.images = []
-        for i in os.listdir(PATH):
-            if i.endswith('.png') or i.endswith('.jpg'):
-                self.images.append(Image(PATH + i))
+        self.animate_transition = True
 
         # Show the first image...
         self.current_image = None
-        self.show_image(0, animate=False)
 
         # Initialize the control area...
         self.control_area = ControlArea()
@@ -216,8 +213,8 @@ class ImageView(cluttergtk.Embed):
         self.control_area.set_depth(1)
 
         # Connect to the events from the control area...
-        self.control_area.connect('previous-image', lambda *args: self.show_image(max(self.current_image - 1, 0)))
-        self.control_area.connect('next-image', lambda *args: self.show_image(min(self.current_image + 1, len(self.images) - 1)))
+        self.control_area.connect('previous-image', lambda *args: self.show_image(max(self.current_image - 1, 0), animate=self.animate_transition))
+        self.control_area.connect('next-image', lambda *args: self.show_image(min(self.current_image + 1, len(self.images) - 1), animate=self.animate_transition))
         self.control_area.connect('enter-event', self.control_area_enter_event_cb)
         self.control_area.connect('leave-event', self.control_area_enter_leave_cb)
 
@@ -227,6 +224,17 @@ class ImageView(cluttergtk.Embed):
 
         # Fade in the control area on mouse movements...
         self.stage.connect('motion-event', self.motion_event_cb)
+
+
+    def set_animate_transition(self, value):
+        self.animate_transition = value
+
+
+    def add_image(self, path):
+        self.images.append(Image(path))
+
+        if self.current_image == None:
+            self.show_image(0, animate=True)
 
 
     def load_image(self, img, async=False):
@@ -249,7 +257,10 @@ class ImageView(cluttergtk.Embed):
         self.load_image(img)
 
         # Preload the next image...
-        self.load_image(img + 1, async=True)
+        try:
+            self.load_image(img + 1, async=True)
+        except:
+            pass
 
         if img == self.current_image:
             return False
@@ -268,6 +279,9 @@ class ImageView(cluttergtk.Embed):
             self.images[self.current_image].fade_in()
             if old_image:
                 old_image.fade_out()
+        else:
+            old_image.set_opacity(0)
+            self.images[self.current_image].set_opacity(255)
 
         self.calculate_image_position(self.images[self.current_image])
 
@@ -327,8 +341,14 @@ class Monet(cream.Module):
 
         # Initialize the GUI...
         self.window = gtk.Window()
+        self.window.set_title("Monet")
 
         self.view = ImageView()
+        self.view.set_animate_transition(self.config.animate_transition)
+
+        for i in os.listdir(PATH):
+            if i.endswith('.png') or i.endswith('.jpg'):
+                self.view.add_image(os.path.join(PATH, i))
 
         self.window.add(self.view)
         self.window.set_size_request(800, 480)

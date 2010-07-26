@@ -1,0 +1,3 @@
+<configuration>
+    <animate_transition type="boolean">true</animate_transition>
+</configuration>

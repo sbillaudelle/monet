@@ -332,7 +332,6 @@ class ImageView(cluttergtk.Embed):
         """
 
         if self.current_image == None and self.start_screen.get_opacity() != 0:
-            print "FADE"
             self.start_screen.fade_out()
 
         # Load the image...

@@ -24,10 +24,10 @@ import gtk
 import clutter
 import cluttergtk
 
+import optparse
+
 import cream
 
-#PATH = '/home/stein/Bilder/'
-PATH = '/'
 ICON_SIZE = 32
 ICON_SPACING = 5
 CONTROL_BOX_MARGIN = 8
@@ -114,7 +114,7 @@ class StartScreen(clutter.Group):
         self.icon = Image('data/images/monet.svg')
         self.icon.load()
 
-        self.label = clutter.Label()
+        self.label = clutter.Text()
         self.label.set_color(clutter.Color(255, 255, 255, 200))
         self.label.set_font_name('Sans 12')
         self.label.set_text("Click to open files...")
@@ -169,7 +169,8 @@ class ControlArea(clutter.Group):
 
     __gsignals__ = {
         'previous-image': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
-        'next-image': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ())
+        'next-image': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'toggle-fullscreen': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         }
 
     def __init__(self):
@@ -190,11 +191,11 @@ class ControlArea(clutter.Group):
         self.icon_previous.set_opacity(150)
         self.add(self.icon_previous)
 
-        self.icon_slideshow = Image('data/images/slideshow.svg', load=True)
-        self.icon_slideshow.set_size(ICON_SIZE, ICON_SIZE)
-        self.icon_slideshow.set_position(CONTROL_BOX_MARGIN + ICON_SIZE + ICON_SPACING, CONTROL_BOX_MARGIN)
-        self.icon_slideshow.set_opacity(150)
-        self.add(self.icon_slideshow)
+        self.icon_fullscreen = Image('data/images/fullscreen.svg', load=True)
+        self.icon_fullscreen.set_size(ICON_SIZE, ICON_SIZE)
+        self.icon_fullscreen.set_position(CONTROL_BOX_MARGIN + ICON_SIZE + ICON_SPACING, CONTROL_BOX_MARGIN)
+        self.icon_fullscreen.set_opacity(150)
+        self.add(self.icon_fullscreen)
 
         self.icon_next = Image('data/images/next.svg', load=True)
         self.icon_next.set_size(ICON_SIZE, ICON_SIZE)
@@ -203,14 +204,20 @@ class ControlArea(clutter.Group):
         self.add(self.icon_next)
 
         self.icon_previous.set_reactive(True)
-        self.icon_previous.connect('button-press-event', lambda *args: self.emit('previous-image'))
+        self.icon_previous.connect('button-release-event', lambda *args: self.emit('previous-image'))
         self.icon_previous.connect('enter-event', lambda *args: self.icon_previous.fade(255, duration=200))
         self.icon_previous.connect('leave-event', lambda *args: self.icon_previous.fade(150, duration=200))
 
         self.icon_next.set_reactive(True)
-        self.icon_next.connect('button-press-event', lambda *args: self.emit('next-image'))
+        self.icon_next.connect('button-release-event', lambda *args: self.emit('next-image'))
         self.icon_next.connect('enter-event', lambda *args: self.icon_next.fade(255, duration=200))
         self.icon_next.connect('leave-event', lambda *args: self.icon_next.fade(150, duration=200))
+
+        self.icon_fullscreen.set_reactive(True)
+        self.icon_fullscreen.connect('button-release-event', lambda *args: self.emit('toggle-fullscreen'))
+        self.icon_fullscreen.connect('button-release-event', lambda *args: self.icon_fullscreen.fade(150, duration=200) if self.icon_fullscreen.get_opacity() != 200 else dir())
+        self.icon_fullscreen.connect('enter-event', lambda *args: self.icon_fullscreen.fade(255, duration=200))
+        self.icon_fullscreen.connect('leave-event', lambda *args: self.icon_fullscreen.fade(150, duration=200))
 
 
     def fade_in(self):
@@ -235,7 +242,8 @@ class ImageView(cluttergtk.Embed):
     """
 
     __gsignals__ = {
-        'show-open-dialog': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
+        'show-open-dialog': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ()),
+        'toggle-fullscreen': (gobject.SIGNAL_RUN_FIRST, gobject.TYPE_NONE, ())
         }
 
     def __init__(self):
@@ -271,8 +279,9 @@ class ImageView(cluttergtk.Embed):
         # Connect to the events from the control area...
         self.control_area.connect('previous-image', lambda *args: self.show_image(max(self.current_image - 1, 0), animate=self.animate_transition))
         self.control_area.connect('next-image', lambda *args: self.show_image(min(self.current_image + 1, len(self.images) - 1), animate=self.animate_transition))
+        self.control_area.connect('toggle-fullscreen', lambda *args: (self.timeouts.__setitem__('control-area-fade-out', gobject.timeout_add(2000, lambda: (self.control_area.fade_out()))), self.emit('toggle-fullscreen')))
         self.control_area.connect('enter-event', self.control_area_enter_event_cb)
-        self.control_area.connect('leave-event', self.control_area_enter_leave_cb)
+        self.control_area.connect('leave-event', self.control_area_leave_event_cb)
 
         # Add the control area to the UI...
         self.stage.add(self.control_area)
@@ -289,6 +298,14 @@ class ImageView(cluttergtk.Embed):
 
     def set_animate_transition(self, value):
         self.animate_transition = value
+
+
+    def hide_start_screen(self, animate=True):
+
+        if animate:
+            self.start_screen.fade_out()
+        else:
+            self.start_screen.set_opacity(0)
 
 
     def add_image(self, path):
@@ -314,7 +331,8 @@ class ImageView(cluttergtk.Embed):
         :type animate: `bool`
         """
 
-        if self.current_image == None:
+        if self.current_image == None and self.start_screen.get_opacity() != 0:
+            print "FADE"
             self.start_screen.fade_out()
 
         # Load the image...
@@ -336,7 +354,8 @@ class ImageView(cluttergtk.Embed):
 
         self.current_image = img
 
-        self.stage.add(self.images[self.current_image])
+        if not self.images[self.current_image].get_parent():
+            self.stage.add(self.images[self.current_image])
 
         if animate:
             self.images[self.current_image].set_opacity(0)
@@ -374,7 +393,7 @@ class ImageView(cluttergtk.Embed):
         self.timeouts['control-area-fade-out'] = False
 
 
-    def control_area_enter_leave_cb(self, control_area, event):
+    def control_area_leave_event_cb(self, control_area, event):
         self.timeouts['control-area-fade-out'] = gobject.timeout_add(2000, lambda: self.control_area.fade_out())
 
 
@@ -408,6 +427,7 @@ class Monet(cream.Module):
     def __init__(self):
 
         cream.Module.__init__(self)
+        self.fullscreen = False
 
         # Initialize the GUI...
         self.window = gtk.Window()
@@ -417,16 +437,45 @@ class Monet(cream.Module):
         self.view.set_animate_transition(self.config.animate_transition)
 
         self.view.connect('show-open-dialog', self.show_open_dialog_cb)
-
-        for i in os.listdir(PATH):
-            if i.endswith('.png') or i.endswith('.jpg'):
-                self.view.add_image(os.path.join(PATH, i))
+        self.view.connect('toggle-fullscreen', self.toggle_fullscreen_cb)
 
         self.window.add(self.view)
         self.window.set_size_request(800, 480)
         self.window.show_all()
 
         self.window.connect('destroy', lambda *args: self.quit())
+
+        parser = optparse.OptionParser()
+        parser.add_option("--fs", "--fullscreen", action="store_true", dest="fullscreen", help="Start Monet in fullscreen mode...")
+
+        (self.options, self.args) = parser.parse_args()
+
+        if self.options.fullscreen:
+            self.set_fullscreen(True)
+
+        if len(self.args):
+            self.view.hide_start_screen(animate=False)
+            path = self.args[0]
+            for i in os.listdir(path):
+                if i.endswith('.png') or i.endswith('.jpg'):
+                    self.view.add_image(os.path.join(path, i))
+
+
+    def toggle_fullscreen_cb(self, view):
+        self.set_fullscreen(not self.fullscreen)
+
+
+    def set_fullscreen(self, fullscreen):
+
+        if self.fullscreen == fullscreen:
+            return
+
+        self.fullscreen = fullscreen
+
+        if self.fullscreen:
+            self.window.fullscreen()
+        else:
+            self.window.unfullscreen()
 
 
     def show_open_dialog_cb(self, view):
@@ -439,7 +488,6 @@ class Monet(cream.Module):
 
         if res == gtk.RESPONSE_ACCEPT:
             path = dialog.get_filename()
-
             for i in os.listdir(path):
                 if i.endswith('.png') or i.endswith('.jpg'):
                     self.view.add_image(os.path.join(path, i))

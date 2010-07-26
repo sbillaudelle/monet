@@ -5,6 +5,8 @@
 
         <license title="GPL" version="3+" />
 
+        <use-feature id=".config" />
+
         <author name="Sebastian Billaudelle" mail="stein@cream-project.org" type="developer" />
     </component>
 </manifest>

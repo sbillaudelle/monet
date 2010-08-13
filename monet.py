@@ -456,7 +456,7 @@ class Monet(cream.Module):
             self.view.hide_start_screen(animate=False)
             path = self.args[0]
             for i in os.listdir(path):
-                if i.endswith('.png') or i.endswith('.jpg'):
+                if i.endswith('.png') or i.endswith('.JPG'):
                     self.view.add_image(os.path.join(path, i))
 
 
@@ -488,7 +488,7 @@ class Monet(cream.Module):
         if res == gtk.RESPONSE_ACCEPT:
             path = dialog.get_filename()
             for i in os.listdir(path):
-                if i.endswith('.png') or i.endswith('.jpg'):
+                if i.endswith('.png') or i.endswith('.JPG'):
                     self.view.add_image(os.path.join(path, i))
 
         dialog.hide()

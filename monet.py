@@ -116,7 +116,7 @@ class StartScreen(clutter.Group):
 
         self.label = clutter.Text()
         self.label.set_color(clutter.Color(255, 255, 255, 200))
-        self.label.set_font_name('Sans 12')
+        self.label.set_font_name('Sans 9')
         self.label.set_text("Click to open files...")
 
         self.add(self.icon)
@@ -185,19 +185,19 @@ class ControlArea(clutter.Group):
         self.add(self.background)
 
         # Add the icons...
-        self.icon_previous = Image('data/images/previous.svg', load=True)
+        self.icon_previous = Image('data/images/previous.png', load=True)
         self.icon_previous.set_size(ICON_SIZE, ICON_SIZE)
         self.icon_previous.set_position(CONTROL_BOX_MARGIN, CONTROL_BOX_MARGIN)
         self.icon_previous.set_opacity(150)
         self.add(self.icon_previous)
 
-        self.icon_fullscreen = Image('data/images/fullscreen.svg', load=True)
+        self.icon_fullscreen = Image('data/images/fullscreen.png', load=True)
         self.icon_fullscreen.set_size(ICON_SIZE, ICON_SIZE)
         self.icon_fullscreen.set_position(CONTROL_BOX_MARGIN + ICON_SIZE + ICON_SPACING, CONTROL_BOX_MARGIN)
         self.icon_fullscreen.set_opacity(150)
         self.add(self.icon_fullscreen)
 
-        self.icon_next = Image('data/images/next.svg', load=True)
+        self.icon_next = Image('data/images/next.png', load=True)
         self.icon_next.set_size(ICON_SIZE, ICON_SIZE)
         self.icon_next.set_position(CONTROL_BOX_MARGIN + 2*ICON_SIZE + 2*ICON_SPACING, CONTROL_BOX_MARGIN)
         self.icon_next.set_opacity(150)
@@ -459,6 +459,8 @@ class Monet(cream.Module):
                 if i.endswith('.png') or i.endswith('.JPG'):
                     self.view.add_image(os.path.join(path, i))
 
+        print "RUNNING"
+
 
     def toggle_fullscreen_cb(self, view):
         self.set_fullscreen(not self.fullscreen)
@@ -488,7 +490,7 @@ class Monet(cream.Module):
         if res == gtk.RESPONSE_ACCEPT:
             path = dialog.get_filename()
             for i in os.listdir(path):
-                if i.endswith('.png') or i.endswith('.JPG'):
+                if i.endswith('.png') or i.endswith('.jpg'):
                     self.view.add_image(os.path.join(path, i))
 
         dialog.hide()
